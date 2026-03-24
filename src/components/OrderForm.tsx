@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, DragEvent, ChangeEvent, FormEvent } from 'react'
+import { upload } from '@vercel/blob/client'
 
 const SERVICE_GROUPS = [
   ['Korektura a stylistika', 'Bibliografické citace', 'Kontrola plagiátorství'],
@@ -72,7 +73,7 @@ export default function OrderForm() {
     const formData = new FormData(form)
 
     try {
-      // Upload souborů po jednom přes /api/upload
+      // Přímý upload souborů z prohlížeče do Vercel Blob (max 25 MB)
       const fileUrls: string[] = []
       for (let idx = 0; idx < files.length; idx++) {
         const file = files[idx]
@@ -80,26 +81,22 @@ export default function OrderForm() {
           try {
             setDebugMsg(`Nahrávám soubor ${idx + 1}/${files.length}: ${file.name}...`)
 
-            const uploadData = new FormData()
-            uploadData.append('file', file)
+            const blob = await upload(
+              `korektura-dp/${Date.now()}_${file.name}`,
+              file,
+              {
+                access: 'public',
+                handleUploadUrl: '/api/blob-upload',
+              }
+            )
 
-            const uploadRes = await fetch('/api/upload', {
-              method: 'POST',
-              body: uploadData,
-            })
-
-            if (!uploadRes.ok) {
-              const err = await uploadRes.text()
-              throw new Error(`Upload error ${uploadRes.status}: ${err}`)
-            }
-
-            const { url } = await uploadRes.json()
-            fileUrls.push(url)
+            fileUrls.push(blob.url)
             setDebugMsg(`Soubor ${idx + 1}/${files.length} nahrán.`)
           } catch (uploadErr) {
             const msg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr)
             console.error('Upload souboru selhal:', msg)
             setDebugMsg(`Chyba nahrávání ${file.name}: ${msg}`)
+            // Pokračuj s odesláním formuláře i bez souboru
           }
         }
       }

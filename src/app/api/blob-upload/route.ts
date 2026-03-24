@@ -1,41 +1,23 @@
-import { handleUpload, type HandleUploadBody } from '@vercel/blob/client'
 import { NextResponse } from 'next/server'
-
-const ALLOWED_TYPES = [
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/rtf',
-  'text/rtf',
-  'application/vnd.oasis.opendocument.text',
-  'text/plain',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.oasis.opendocument.spreadsheet',
-  'image/jpeg',
-  'image/png',
-  'application/zip',
-  'application/x-zip-compressed',
-]
+import { handleUpload, type HandleUploadBody } from '@vercel/blob/client'
 
 export async function POST(request: Request): Promise<Response> {
-  const body = (await request.json()) as HandleUploadBody
-
   try {
+    const body = (await request.json()) as HandleUploadBody
+
     const jsonResponse = await handleUpload({
       body,
       request,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
       onBeforeGenerateToken: async () => ({
-        allowedContentTypes: ALLOWED_TYPES,
-        addRandomSuffix: true,
-        tokenPayload: JSON.stringify({ folder: 'korektura-dp' }),
+        maximumSizeInBytes: 25 * 1024 * 1024,
       }),
-      onUploadCompleted: async ({ blob }) => {
-        console.log('Blob uploaded:', blob.url)
-      },
+      onUploadCompleted: async () => {},
     })
+
     return NextResponse.json(jsonResponse)
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 400 })
+    console.error('Blob upload error:', error)
+    return NextResponse.json({ error: String(error) }, { status: 500 })
   }
 }
