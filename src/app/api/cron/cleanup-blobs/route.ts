@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000
+  const thirtyDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000
   let deleted = 0
 
   try {
