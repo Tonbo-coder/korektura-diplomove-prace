@@ -70,10 +70,12 @@ export async function POST(request: NextRequest) {
 
     // Build email
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: process.env.SMTP_HOST ?? 'smtp.gmail.com',
+      port: Number(process.env.SMTP_PORT ?? 587),
+      secure: process.env.SMTP_SECURE === 'true',
       auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD,
+        user: process.env.EMAIL_FROM,
+        pass: process.env.SMTP_PASS,
       },
     })
 
@@ -96,8 +98,8 @@ export async function POST(request: NextRequest) {
     `
 
     await transporter.sendMail({
-      from: `"Web Korektura DP" <${process.env.GMAIL_USER}>`,
-      to: process.env.RECIPIENT_EMAIL || process.env.GMAIL_USER,
+      from: `"Web Korektura DP" <${process.env.EMAIL_FROM}>`,
+      to: process.env.ORDER_TO_EMAIL || process.env.EMAIL_FROM,
       replyTo: email,
       subject: `Nová objednávka korektury DP – ${name}`,
       html: htmlBody,
