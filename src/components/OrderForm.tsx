@@ -81,7 +81,7 @@ export default function OrderForm() {
           try {
             setDebugMsg(`Nahrávám soubor ${idx + 1}/${files.length}: ${file.name}...`)
 
-            const blob = await upload(
+            const uploadPromise = upload(
               `korektura-dp/${Date.now()}_${file.name}`,
               file,
               {
@@ -89,6 +89,12 @@ export default function OrderForm() {
                 handleUploadUrl: '/api/blob-upload',
               }
             )
+
+            const timeoutPromise = new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error('Upload timeout – trvá déle než 30 sekund')), 30000)
+            )
+
+            const blob = await Promise.race([uploadPromise, timeoutPromise])
 
             fileUrls.push(blob.url)
             setDebugMsg(`Soubor ${idx + 1}/${files.length} nahrán.`)
