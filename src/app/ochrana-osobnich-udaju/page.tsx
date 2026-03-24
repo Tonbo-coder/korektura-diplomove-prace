@@ -4,7 +4,7 @@ import LegalLayout from '@/components/LegalLayout'
 export const metadata: Metadata = {
   title: 'Ochrana osobních údajů – Korektura diplomové práce',
   description: 'Zásady ochrany osobních údajů webu korektura-diplomove-prace.cz dle GDPR.',
-  robots: { index: true, follow: true },
+  robots: { index: false, follow: false },
 }
 
 export default function OchranaOsobnichUdajuPage() {

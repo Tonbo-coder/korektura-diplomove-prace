@@ -4,7 +4,7 @@ import LegalLayout from '@/components/LegalLayout'
 export const metadata: Metadata = {
   title: 'Obchodní podmínky – Korektura diplomové práce',
   description: 'Obchodní podmínky pro využití služeb korektura-diplomove-prace.cz.',
-  robots: { index: true, follow: true },
+  robots: { index: false, follow: false },
 }
 
 export default function ObchodniPodminkyPage() {
