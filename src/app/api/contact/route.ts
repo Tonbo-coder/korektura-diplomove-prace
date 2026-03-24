@@ -1,33 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
-import { v2 as cloudinary } from 'cloudinary'
+import { put } from '@vercel/blob'
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-})
-
-async function uploadToCloudinary(file: File): Promise<string> {
-  const bytes = await file.arrayBuffer()
-  const buffer = Buffer.from(bytes)
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-
-  return new Promise((resolve, reject) => {
-    cloudinary.uploader
-      .upload_stream(
-        {
-          resource_type: 'auto',
-          folder: 'korektura-diplomove-prace',
-          public_id: `${Date.now()}_${safeName}`,
-        },
-        (error, result) => {
-          if (error || !result) reject(error ?? new Error('Upload failed'))
-          else resolve(result.secure_url)
-        }
-      )
-      .end(buffer)
+async function uploadToBlob(file: File): Promise<string> {
+  const safeName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+  const blob = await put(`korektura-dp/${safeName}`, file, {
+    access: 'public',
+    addRandomSuffix: false,
   })
+  return blob.url
 }
 
 export async function POST(request: NextRequest) {
@@ -48,19 +29,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Jméno a email jsou povinné.' }, { status: 400 })
     }
 
-    // Upload files to Cloudinary (only if configured)
+    // Upload files to Vercel Blob
     const fileUrls: string[] = []
-    const cloudinaryConfigured =
-      process.env.CLOUDINARY_CLOUD_NAME &&
-      process.env.CLOUDINARY_API_KEY &&
-      process.env.CLOUDINARY_API_SECRET
-
-    if (cloudinaryConfigured) {
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
       for (const file of files) {
         if (file && file.size > 0) {
           try {
-            const url = await uploadToCloudinary(file)
-            fileUrls.push(`${file.name}: ${url}`)
+            const url = await uploadToBlob(file)
+            fileUrls.push(`<a href="${url}">${file.name}</a>`)
           } catch {
             fileUrls.push(`${file.name}: (nahrávání selhalo)`)
           }
@@ -95,6 +71,7 @@ export async function POST(request: NextRequest) {
         <tr><td style="padding:8px;font-weight:bold;background:#eaf4f1;">Soubory</td><td style="padding:8px;">${fileUrls.length ? fileUrls.join('<br>') : '–'}</td></tr>
         ${newsletterRow}
       </table>
+      ${fileUrls.length ? '<p style="color:#666;font-size:12px;">⚠️ Soubory budou automaticky smazány po 30 dnech.</p>' : ''}
     `
 
     await transporter.sendMail({
