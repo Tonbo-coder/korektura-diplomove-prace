@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, DragEvent, ChangeEvent, FormEvent } from 'react'
-import { upload } from '@vercel/blob/client'
+import { put } from '@vercel/blob/client'
 
 const SERVICE_GROUPS = [
   ['Korektura a stylistika', 'Bibliografické citace', 'Kontrola plagiátorství'],
@@ -87,7 +87,7 @@ export default function OrderForm() {
             const { token, pathname } = await tokenRes.json()
 
             // 2. Nahraj soubor přímo do Blob
-            const blob = await upload(pathname, file, {
+            const blob = await put(pathname, file, {
               access: 'public',
               token,
             })
