@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, DragEvent, ChangeEvent, FormEvent } from 'react'
+import { upload } from '@vercel/blob/client'
 
 const SERVICE_GROUPS = [
   ['Korektura a stylistika', 'Bibliografické citace', 'Kontrola plagiátorství'],
@@ -60,13 +61,38 @@ export default function OrderForm() {
     setErrorMsg('')
 
     const form = e.currentTarget
-    const data = new FormData(form)
-    data.delete('files')
-    files.forEach((f) => data.append('files', f))
-    data.set('newsletter_consent', newsletter ? 'ANO' : 'NE')
+    const formData = new FormData(form)
 
     try {
-      const res = await fetch('/api/contact', { method: 'POST', body: data })
+      // Přímý upload souborů z prohlížeče do Vercel Blob
+      const fileUrls: string[] = []
+      for (const file of files) {
+        if (file && file.size > 0) {
+          const blob = await upload(`korektura-dp/${Date.now()}_${file.name}`, file, {
+            access: 'public',
+            handleUploadUrl: '/api/blob-upload',
+          })
+          fileUrls.push(blob.url)
+        }
+      }
+
+      // Odeslání dat formuláře jako JSON
+      const payload = {
+        name: formData.get('name'),
+        email: formData.get('email'),
+        phone: formData.get('phone'),
+        message: formData.get('message'),
+        services: formData.getAll('services'),
+        deadline: formData.get('deadline') ?? formData.get('urgency'),
+        fileUrls,
+        newsletterConsent: newsletter,
+      }
+
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Chyba serveru')
       setStatus('success')
