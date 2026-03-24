@@ -5,9 +5,17 @@ const ALLOWED_TYPES = [
   'application/pdf',
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/rtf',
+  'text/rtf',
+  'application/vnd.oasis.opendocument.text',
   'text/plain',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.oasis.opendocument.spreadsheet',
   'image/jpeg',
   'image/png',
+  'application/zip',
+  'application/x-zip-compressed',
 ]
 
 export async function POST(request: Request): Promise<Response> {

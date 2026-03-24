@@ -9,7 +9,7 @@ const SERVICE_GROUPS = [
   ['Analýza využití AI', 'Písemné doporučení'],
 ]
 
-const ACCEPTED_TYPES = '.jpg,.png,.gif,.pdf,.doc,.docx,.txt'
+const ACCEPTED_TYPES = '.pdf,.doc,.docx,.rtf,.odt,.txt,.xls,.xlsx,.ods,.jpg,.jpeg,.png,.zip'
 const MAX_FILES = 5
 const MAX_FILE_SIZE = 25 * 1024 * 1024 // 25 MB
 
@@ -197,7 +197,7 @@ export default function OrderForm() {
                   <span className="text-brand font-semibold">vyberte v počítači</span>
                 </p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  PDF, DOCX, TXT, JPG, PNG – max. {MAX_FILES} souborů, každý do 25 MB
+                  PDF, DOC, DOCX, RTF, ODT, TXT, XLS, XLSX, JPG, PNG, ZIP – max. {MAX_FILES} souborů, každý do 25 MB
                 </p>
               </div>
 
