@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useRef, DragEvent, ChangeEvent, FormEvent } from 'react'
-import { put } from '@vercel/blob/client'
 
 const SERVICE_GROUPS = [
   ['Korektura a stylistika', 'Bibliografické citace', 'Kontrola plagiátorství'],
@@ -73,34 +72,29 @@ export default function OrderForm() {
     const formData = new FormData(form)
 
     try {
-      // Přímý upload souborů z prohlížeče do Vercel Blob
+      // Upload souborů po jednom přes /api/upload
       const fileUrls: string[] = []
       for (let idx = 0; idx < files.length; idx++) {
         const file = files[idx]
         if (file && file.size > 0) {
           try {
-            setDebugMsg(`Nahrávám soubor ${idx + 1}/${files.length}: ${file.name} (token)...`)
+            setDebugMsg(`Nahrávám soubor ${idx + 1}/${files.length}: ${file.name}...`)
 
-            const tokenRes = await fetch('/api/blob-token', {
+            const uploadData = new FormData()
+            uploadData.append('file', file)
+
+            const uploadRes = await fetch('/api/upload', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ filename: file.name }),
+              body: uploadData,
             })
 
-            if (!tokenRes.ok) {
-              const err = await tokenRes.text()
-              throw new Error(`Token error ${tokenRes.status}: ${err}`)
+            if (!uploadRes.ok) {
+              const err = await uploadRes.text()
+              throw new Error(`Upload error ${uploadRes.status}: ${err}`)
             }
 
-            const { token, pathname } = await tokenRes.json()
-            setDebugMsg(`Nahrávám soubor ${idx + 1}/${files.length}: ${file.name} (upload)...`)
-
-            const blob = await put(pathname, file, {
-              access: 'public',
-              token,
-            })
-
-            fileUrls.push(blob.url)
+            const { url } = await uploadRes.json()
+            fileUrls.push(url)
             setDebugMsg(`Soubor ${idx + 1}/${files.length} nahrán.`)
           } catch (uploadErr) {
             const msg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr)
