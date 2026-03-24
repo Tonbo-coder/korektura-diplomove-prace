@@ -76,11 +76,20 @@ export default function OrderForm() {
       const fileUrls: string[] = []
       for (const file of files) {
         if (file && file.size > 0) {
-          const blob = await upload(`korektura-dp/${Date.now()}_${file.name}`, file, {
-            access: 'public',
-            handleUploadUrl: '/api/blob-upload',
-          })
-          fileUrls.push(blob.url)
+          try {
+            const controller = new AbortController()
+            const timeout = setTimeout(() => controller.abort(), 30000)
+            const blob = await upload(`korektura-dp/${Date.now()}_${file.name}`, file, {
+              access: 'public',
+              handleUploadUrl: '/api/blob-upload',
+              abortSignal: controller.signal,
+            })
+            clearTimeout(timeout)
+            fileUrls.push(blob.url)
+          } catch (uploadErr) {
+            console.error('Upload souboru selhal:', uploadErr)
+            // Pokračuj bez souboru — neblokuj odeslání formuláře
+          }
         }
       }
 
