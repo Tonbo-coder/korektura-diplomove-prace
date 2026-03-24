@@ -69,6 +69,7 @@ export default function OchranaOsobnichUdajuPage() {
         </p>
         <ul>
           <li>dalším spolupracujícím subjektům nezbytným pro realizaci služby</li>
+          <li><strong>Cloudinary, Inc.</strong> (cloudinary.com) – služba pro dočasné uložení nahraných souborů (např. diplomové práce) v rámci zpracování objednávky. Soubory jsou uchovávány po dobu nezbytnou ke zpracování zakázky a následně smazány. Cloudinary splňuje standardy ISO 27001 a SOC 2.</li>
         </ul>
         <p>
           Tyto subjekty zpracovávají osobní údaje výhradně na základě pokynů správce a jsou vázány
