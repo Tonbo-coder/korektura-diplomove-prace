@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { PT_Sans, Source_Sans_3 } from 'next/font/google'
 import Script from 'next/script'
+import { Analytics } from '@vercel/analytics/next'
 import CookieConsent from '@/components/CookieConsent'
 import './globals.css'
 
@@ -158,6 +159,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </noscript>
         {children}
         <CookieConsent />
+        <Analytics />
       </body>
     </html>
   )
