@@ -39,6 +39,7 @@ export default function OrderForm() {
   const [urgency, setUrgency] = useState<'expres' | 'smart' | 'custom'>('smart')
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
+  const [debugMsg, setDebugMsg] = useState('')
   const [newsletter, setNewsletter] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -74,30 +75,41 @@ export default function OrderForm() {
     try {
       // Přímý upload souborů z prohlížeče do Vercel Blob
       const fileUrls: string[] = []
-      for (const file of files) {
+      for (let idx = 0; idx < files.length; idx++) {
+        const file = files[idx]
         if (file && file.size > 0) {
           try {
-            // 1. Získej upload token ze serveru
+            setDebugMsg(`Nahrávám soubor ${idx + 1}/${files.length}: ${file.name} (token)...`)
+
             const tokenRes = await fetch('/api/blob-token', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ filename: file.name }),
             })
-            if (!tokenRes.ok) throw new Error('Token error')
-            const { token, pathname } = await tokenRes.json()
 
-            // 2. Nahraj soubor přímo do Blob
+            if (!tokenRes.ok) {
+              const err = await tokenRes.text()
+              throw new Error(`Token error ${tokenRes.status}: ${err}`)
+            }
+
+            const { token, pathname } = await tokenRes.json()
+            setDebugMsg(`Nahrávám soubor ${idx + 1}/${files.length}: ${file.name} (upload)...`)
+
             const blob = await put(pathname, file, {
               access: 'public',
               token,
             })
+
             fileUrls.push(blob.url)
+            setDebugMsg(`Soubor ${idx + 1}/${files.length} nahrán.`)
           } catch (uploadErr) {
-            console.error('Upload souboru selhal:', uploadErr)
-            // Pokračuj bez souboru
+            const msg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr)
+            console.error('Upload souboru selhal:', msg)
+            setDebugMsg(`Chyba nahrávání ${file.name}: ${msg}`)
           }
         }
       }
+      setDebugMsg('Odesílám formulář...')
 
       // Odeslání dat formuláře jako JSON
       const payload = {
@@ -296,6 +308,13 @@ export default function OrderForm() {
                              focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand mb-4"
                   style={{ minWidth: '190px' }}
                 />
+              )}
+
+              {/* Debug */}
+              {status === 'loading' && debugMsg && (
+                <div className="mb-4 bg-blue-50 border border-blue-300 text-blue-700 px-4 py-2 text-sm">
+                  {debugMsg}
+                </div>
               )}
 
               {/* Error */}
