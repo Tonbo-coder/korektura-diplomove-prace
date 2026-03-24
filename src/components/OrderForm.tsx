@@ -77,18 +77,24 @@ export default function OrderForm() {
       for (const file of files) {
         if (file && file.size > 0) {
           try {
-            const controller = new AbortController()
-            const timeout = setTimeout(() => controller.abort(), 30000)
-            const blob = await upload(`korektura-dp/${Date.now()}_${file.name}`, file, {
-              access: 'public',
-              handleUploadUrl: '/api/blob-upload',
-              abortSignal: controller.signal,
+            // 1. Získej upload token ze serveru
+            const tokenRes = await fetch('/api/blob-token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ filename: file.name }),
             })
-            clearTimeout(timeout)
+            if (!tokenRes.ok) throw new Error('Token error')
+            const { token, pathname } = await tokenRes.json()
+
+            // 2. Nahraj soubor přímo do Blob
+            const blob = await upload(pathname, file, {
+              access: 'public',
+              token,
+            })
             fileUrls.push(blob.url)
           } catch (uploadErr) {
             console.error('Upload souboru selhal:', uploadErr)
-            // Pokračuj bez souboru — neblokuj odeslání formuláře
+            // Pokračuj bez souboru
           }
         }
       }
