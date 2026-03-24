@@ -11,6 +11,7 @@ const SERVICE_GROUPS = [
 
 const ACCEPTED_TYPES = '.jpg,.png,.gif,.pdf,.doc,.docx,.txt'
 const MAX_FILES = 5
+const MAX_FILE_SIZE = 25 * 1024 * 1024 // 25 MB
 
 const inputCls =
   'w-full border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand'
@@ -43,7 +44,14 @@ export default function OrderForm() {
 
   const addFiles = (newFiles: FileList | null) => {
     if (!newFiles) return
-    setFiles((prev) => [...prev, ...Array.from(newFiles)].slice(0, MAX_FILES))
+    const valid = Array.from(newFiles).filter((f) => {
+      if (f.size > MAX_FILE_SIZE) {
+        alert(`Soubor „${f.name}" je příliš velký. Maximální velikost je 25 MB.`)
+        return false
+      }
+      return true
+    })
+    setFiles((prev) => [...prev, ...valid].slice(0, MAX_FILES))
   }
 
   const removeFile = (index: number) =>
@@ -189,7 +197,7 @@ export default function OrderForm() {
                   <span className="text-brand font-semibold">vyberte v počítači</span>
                 </p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  PDF, DOCX, TXT, JPG, PNG – max. {MAX_FILES} souborů
+                  PDF, DOCX, TXT, JPG, PNG – max. {MAX_FILES} souborů, každý do 25 MB
                 </p>
               </div>
 
