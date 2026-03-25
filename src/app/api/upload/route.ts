@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       token: process.env.BLOB_READ_WRITE_TOKEN,
     })
 
-    return NextResponse.json({ url: blob.url })
+    return NextResponse.json({ url: blob.downloadUrl || blob.url })
   } catch (error) {
     console.error('Upload error:', error)
     return NextResponse.json({ error: String(error) }, { status: 500 })
