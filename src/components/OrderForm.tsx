@@ -72,7 +72,7 @@ export default function OrderForm() {
     const formData = new FormData(form)
 
     try {
-      // Manuální upload souborů – obchází @vercel/blob/client (undici nefunguje v prohlížeči)
+      // Upload souborů přes Edge API route (bez 4.5MB limitu)
       const fileUrls: string[] = []
       for (let idx = 0; idx < files.length; idx++) {
         const file = files[idx]
@@ -80,56 +80,21 @@ export default function OrderForm() {
           try {
             setDebugMsg(`Nahrávám soubor ${idx + 1}/${files.length}: ${file.name}...`)
 
-            // 1) Získej client token ze serveru
-            const tokenRes = await fetch('/api/blob-upload', {
+            const uploadData = new FormData()
+            uploadData.append('file', file)
+
+            const uploadRes = await fetch('/api/upload', {
               method: 'POST',
-              headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({
-                type: 'blob.generate-client-token',
-                payload: {
-                  pathname: `korektura-dp/${Date.now()}_${file.name}`,
-                  clientPayload: null,
-                  multipart: false,
-                },
-              }),
+              body: uploadData,
             })
 
-            if (!tokenRes.ok) {
-              throw new Error(`Token error: ${tokenRes.status}`)
-            }
-
-            const { clientToken } = await tokenRes.json()
-            if (!clientToken) {
-              throw new Error('Server nevrátil client token')
-            }
-
-            // 2) Extrahuj store ID z tokenu pro API URL
-            const tokenParts = clientToken.split('_')
-            const storeId = tokenParts[3] || ''
-
-            // 3) Upload souboru přímo na Vercel Blob pomocí nativního fetch
-            const pathname = `korektura-dp/${Date.now()}_${file.name}`
-            const params = new URLSearchParams({ pathname })
-            const uploadRes = await fetch(
-              `https://${storeId}.public.blob.vercel-storage.com/?${params.toString()}`,
-              {
-                method: 'PUT',
-                headers: {
-                  authorization: `Bearer ${clientToken}`,
-                  'x-api-version': '7',
-                  'x-api-blob-put-access': 'public',
-                },
-                body: file,
-              }
-            )
-
             if (!uploadRes.ok) {
-              const errText = await uploadRes.text()
-              throw new Error(`Upload failed: ${uploadRes.status} – ${errText}`)
+              const errJson = await uploadRes.json().catch(() => ({ error: 'Upload failed' }))
+              throw new Error(errJson.error || `Upload failed: ${uploadRes.status}`)
             }
 
-            const blob = await uploadRes.json()
-            fileUrls.push(blob.url)
+            const result = await uploadRes.json()
+            fileUrls.push(result.url)
             setDebugMsg(`Soubor ${idx + 1}/${files.length} nahrán.`)
           } catch (uploadErr) {
             const msg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr)
