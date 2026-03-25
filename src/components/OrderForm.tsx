@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, DragEvent, ChangeEvent, FormEvent } from 'react'
+import { upload } from '@vercel/blob/client'
 
 const SERVICE_GROUPS = [
   ['Korektura a stylistika', 'Bibliografické citace', 'Kontrola plagiátorství'],
@@ -44,7 +45,13 @@ export default function OrderForm() {
 
   const addFiles = (newFiles: FileList | null) => {
     if (!newFiles) return
+    const allowedExts = ACCEPTED_TYPES.split(',')
     const valid = Array.from(newFiles).filter((f) => {
+      const ext = '.' + f.name.split('.').pop()?.toLowerCase()
+      if (!allowedExts.includes(ext)) {
+        alert(`Soubor „${f.name}" má nepodporovaný formát. Povolené: PDF, DOC, DOCX, RTF, ODT, TXT, XLS, XLSX, ODS, JPG, PNG, ZIP.`)
+        return false
+      }
       if (f.size > MAX_FILE_SIZE) {
         alert(`Soubor „${f.name}" je příliš velký. Maximální velikost je 25 MB.`)
         return false
@@ -72,7 +79,7 @@ export default function OrderForm() {
     const formData = new FormData(form)
 
     try {
-      // Upload souborů přes Edge API route (bez 4.5MB limitu)
+      // Client-side upload přímo do Vercel Blob (podporuje soubory do 25 MB)
       const fileUrls: string[] = []
       for (let idx = 0; idx < files.length; idx++) {
         const file = files[idx]
@@ -80,21 +87,16 @@ export default function OrderForm() {
           try {
             setDebugMsg(`Nahrávám soubor ${idx + 1}/${files.length}: ${file.name}...`)
 
-            const uploadData = new FormData()
-            uploadData.append('file', file)
+            const blob = await upload(
+              `korektura-dp/${Date.now()}_${file.name}`,
+              file,
+              {
+                access: 'public',
+                handleUploadUrl: '/api/blob-upload',
+              }
+            )
 
-            const uploadRes = await fetch('/api/upload', {
-              method: 'POST',
-              body: uploadData,
-            })
-
-            if (!uploadRes.ok) {
-              const errJson = await uploadRes.json().catch(() => ({ error: 'Upload failed' }))
-              throw new Error(errJson.error || `Upload failed: ${uploadRes.status}`)
-            }
-
-            const result = await uploadRes.json()
-            fileUrls.push(result.url)
+            fileUrls.push(blob.url)
             setDebugMsg(`Soubor ${idx + 1}/${files.length} nahrán.`)
           } catch (uploadErr) {
             const msg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr)
