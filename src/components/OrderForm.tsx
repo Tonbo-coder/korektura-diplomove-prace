@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useRef, DragEvent, ChangeEvent, FormEvent } from 'react'
-import { upload } from '@vercel/blob/client'
 
 const SERVICE_GROUPS = [
   ['Korektura a stylistika', 'Bibliografické citace', 'Kontrola plagiátorství'],
@@ -73,7 +72,7 @@ export default function OrderForm() {
     const formData = new FormData(form)
 
     try {
-      // Přímý upload souborů z prohlížeče do Vercel Blob (max 25 MB)
+      // Manuální upload souborů – obchází @vercel/blob/client (undici nefunguje v prohlížeči)
       const fileUrls: string[] = []
       for (let idx = 0; idx < files.length; idx++) {
         const file = files[idx]
@@ -81,21 +80,55 @@ export default function OrderForm() {
           try {
             setDebugMsg(`Nahrávám soubor ${idx + 1}/${files.length}: ${file.name}...`)
 
-            const uploadPromise = upload(
-              `korektura-dp/${Date.now()}_${file.name}`,
-              file,
+            // 1) Získej client token ze serveru
+            const tokenRes = await fetch('/api/blob-upload', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({
+                type: 'blob.generate-client-token',
+                payload: {
+                  pathname: `korektura-dp/${Date.now()}_${file.name}`,
+                  clientPayload: null,
+                  multipart: false,
+                },
+              }),
+            })
+
+            if (!tokenRes.ok) {
+              throw new Error(`Token error: ${tokenRes.status}`)
+            }
+
+            const { clientToken } = await tokenRes.json()
+            if (!clientToken) {
+              throw new Error('Server nevrátil client token')
+            }
+
+            // 2) Extrahuj store ID z tokenu pro API URL
+            const tokenParts = clientToken.split('_')
+            const storeId = tokenParts[3] || ''
+
+            // 3) Upload souboru přímo na Vercel Blob pomocí nativního fetch
+            const pathname = `korektura-dp/${Date.now()}_${file.name}`
+            const params = new URLSearchParams({ pathname })
+            const uploadRes = await fetch(
+              `https://${storeId}.public.blob.vercel-storage.com/?${params.toString()}`,
               {
-                access: 'public',
-                handleUploadUrl: '/api/blob-upload',
+                method: 'PUT',
+                headers: {
+                  authorization: `Bearer ${clientToken}`,
+                  'x-api-version': '7',
+                  'x-api-blob-put-access': 'public',
+                },
+                body: file,
               }
             )
 
-            const timeoutPromise = new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error('Upload timeout – trvá déle než 30 sekund')), 30000)
-            )
+            if (!uploadRes.ok) {
+              const errText = await uploadRes.text()
+              throw new Error(`Upload failed: ${uploadRes.status} – ${errText}`)
+            }
 
-            const blob = await Promise.race([uploadPromise, timeoutPromise])
-
+            const blob = await uploadRes.json()
             fileUrls.push(blob.url)
             setDebugMsg(`Soubor ${idx + 1}/${files.length} nahrán.`)
           } catch (uploadErr) {
