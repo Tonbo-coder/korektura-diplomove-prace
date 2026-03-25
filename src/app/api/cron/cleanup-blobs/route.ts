@@ -21,12 +21,13 @@ export async function GET(request: Request) {
         prefix: 'korektura-dp/',
         cursor,
         limit: 100,
+        token: process.env.BLOB_READ_WRITE_TOKEN,
       })
 
       for (const blob of result.blobs) {
         const uploadedAt = new Date(blob.uploadedAt).getTime()
         if (uploadedAt < thirtyDaysAgo) {
-          await del(blob.url)
+          await del(blob.url, { token: process.env.BLOB_READ_WRITE_TOKEN })
           deleted++
         }
       }
