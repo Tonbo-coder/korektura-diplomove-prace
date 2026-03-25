@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
 
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
     const blob = await put(`korektura-dp/${Date.now()}_${safeName}`, file, {
-      access: 'private',
+      access: 'public',
       token: process.env.BLOB_READ_WRITE_TOKEN,
     })
 
