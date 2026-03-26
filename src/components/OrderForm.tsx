@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, DragEvent, ChangeEvent, FormEvent } from 'react'
+import { useRouter } from 'next/navigation'
 import { upload } from '@vercel/blob/client'
 
 const SERVICE_GROUPS = [
@@ -34,6 +35,7 @@ function SectionHeader({ num, title }: { num: string; title: string }) {
 const labelCls = 'block text-xs font-semibold text-gray-600 mb-1'
 
 export default function OrderForm() {
+  const router = useRouter()
   const [files, setFiles] = useState<File[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [urgency, setUrgency] = useState<'expres' | 'smart' | 'custom'>('smart')
@@ -49,11 +51,11 @@ export default function OrderForm() {
     const valid = Array.from(newFiles).filter((f) => {
       const ext = '.' + f.name.split('.').pop()?.toLowerCase()
       if (!allowedExts.includes(ext)) {
-        alert(`Soubor „${f.name}" má nepodporovaný formát. Povolené: PDF, DOC, DOCX, RTF, ODT, TXT, XLS, XLSX, ODS, JPG, PNG, ZIP.`)
+        alert(`Soubor \u201E${f.name}\u201C má nepodporovaný formát. Povolené: PDF, DOC, DOCX, RTF, ODT, TXT, XLS, XLSX, ODS, JPG, PNG, ZIP.`)
         return false
       }
       if (f.size > MAX_FILE_SIZE) {
-        alert(`Soubor „${f.name}" je příliš velký. Maximální velikost je 25 MB.`)
+        alert(`Soubor \u201E${f.name}\u201C je příliš velký. Maximální velikost je 25 MB.`)
         return false
       }
       return true
@@ -102,7 +104,6 @@ export default function OrderForm() {
             const msg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr)
             console.error('Upload souboru selhal:', msg)
             setDebugMsg(`Chyba nahrávání ${file.name}: ${msg}`)
-            // Pokračuj s odesláním formuláře i bez souboru
           }
         }
       }
@@ -128,9 +129,7 @@ export default function OrderForm() {
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Chyba serveru')
       setStatus('success')
-      form.reset()
-      setFiles([])
-      setUrgency('smart')
+      setTimeout(() => router.push('/dekujeme-za-objednavku'), 3000)
     } catch (err) {
       setStatus('error')
       setErrorMsg(err instanceof Error ? err.message : 'Neznámá chyba')
@@ -144,241 +143,242 @@ export default function OrderForm() {
       <div className="max-w-4xl mx-auto px-4">
         <h2 className="section-title text-navy text-center mb-3">Objednávkový formulář</h2>
         <p className="text-center text-text-dark text-base leading-relaxed mb-10">
-          Pošlete nám svou diplomovou práci a my vám obratem připravíme cenovou nabídku
-          na korekturu. Komunikujeme převážně e‑mailem – pokud preferujete telefon, rádi
-          se domluvíme i osobně.
+          Pošlete nám svou diplomovou práci a my vám obratem připravíme cenovou nabídku
+          na korekturu. Komunikujeme převážně e&#x2011;mailem &ndash; pokud preferujete telefon, rádi
+          se domluvíme i osobně.
         </p>
 
         {status === 'success' ? (
           <div className="bg-green-50 border border-green-300 text-green-800 rounded p-8 text-center">
-            <div className="text-4xl mb-3">✓</div>
+            <div className="text-4xl mb-3">{'\u2713'}</div>
             <h3 className="font-bold text-xl mb-2">Objednávka odeslána!</h3>
-            <p>Děkujeme za vaši poptávku. Ozveme se vám co nejdříve s nacenením korektury.</p>
+            <p>Děkujeme za vaši poptávku. Ozveme se vám co nejdříve s naceněním korektury.</p>
+            <p className="text-sm text-gray-500 mt-3">Přesměrování...</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} noValidate className="bg-white p-6 md:p-8 shadow-sm space-y-8">
 
-            {/* ── SEKCE 1: Kontaktní údaje ── */}
-            <div>
-              <SectionHeader num="1" title="Vaše kontaktní údaje" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                <div>
-                  <label htmlFor="name" className={labelCls}>
-                    Jméno <span className="text-brand">*</span>
-                  </label>
-                  <input type="text" id="name" name="name" required
-                    placeholder="Celé jméno" className={inputCls} />
-                </div>
-                <div>
-                  <label htmlFor="email" className={labelCls}>
-                    E-mail <span className="text-brand">*</span>
-                  </label>
-                  <input type="email" id="email" name="email" required
-                    placeholder="e‑mailová adresa" className={inputCls} />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="phone" className={labelCls}>Telefon</label>
-                  <input type="tel" id="phone" name="phone"
-                    placeholder="+420 xxx xxx xxx" className={inputCls} />
-                </div>
-                <div>
-                  <label htmlFor="message" className={labelCls}>Zpráva</label>
-                  <textarea id="message" name="message" rows={3}
-                    placeholder="Počet stran, škola, poznámky..."
-                    className={`${inputCls} resize-none`} />
-                </div>
-              </div>
-            </div>
-
-            {/* ── SEKCE 2: Soubory + Chci také ── */}
-            <div>
-              <SectionHeader num="2" title="Soubory a doplňkové služby" />
-
-              {/* File drop zone */}
-              <div
-                onDrop={onDrop}
-                onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
-                onDragLeave={() => setIsDragging(false)}
-                onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed px-4 py-6 text-center cursor-pointer transition-colors duration-200 mb-4 ${
-                  isDragging
-                    ? 'border-brand bg-brand/5'
-                    : 'border-gray-300 hover:border-brand hover:bg-brand/5'
-                }`}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept={ACCEPTED_TYPES}
-                  className="hidden"
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => addFiles(e.target.files)}
-                />
-                <p className="text-sm text-gray-500">
-                  Přetáhněte soubory nebo{' '}
-                  <span className="text-brand font-semibold">vyberte v počítači</span>
-                </p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  PDF, DOC, DOCX, RTF, ODT, TXT, XLS, XLSX, JPG, PNG, ZIP – max. {MAX_FILES} souborů, každý do 25 MB
-                </p>
-              </div>
-
-              {/* File list */}
-              {files.length > 0 && (
-                <ul className="mb-4 space-y-1">
-                  {files.map((f, i) => (
-                    <li key={i} className="flex justify-between bg-gray-50 px-3 py-1.5 text-xs text-gray-600">
-                      <span className="truncate">{f.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeFile(i)}
-                        className="ml-2 text-gray-400 hover:text-red-500 font-bold flex-shrink-0"
-                      >
-                        ×
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {/* Chci také */}
-              <label className="block text-xs font-semibold text-gray-600 mb-2">Chci také</label>
-              <div className="grid grid-cols-2 gap-x-8 gap-y-0">
-                {SERVICE_GROUPS.flat().map((service) => (
-                  <label key={service} className="flex items-center gap-2 cursor-pointer py-1.5">
-                    <input type="checkbox" name="services" value={service}
-                      className="w-3.5 h-3.5 accent-brand flex-shrink-0" />
-                    <span className="text-xs text-gray-600">{service}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* ── SEKCE 3: Termín + odeslání ── */}
-            <div>
-              <SectionHeader num="3" title="Termín a odeslání" />
-
-              {/* Radio tiles */}
-              <div className="flex flex-col sm:flex-row gap-3 mb-4">
-                {[
-                  { id: 'expres' as const, label: 'Expres', note: 'do 24 hodin' },
-                  { id: 'smart'  as const, label: 'Smart',  note: 'do 2 dnů'    },
-                  { id: 'custom' as const, label: 'Vlastní datum', note: 'zvolím sám/a' },
-                ].map((o) => (
-                  <label
-                    key={o.id}
-                    className="flex items-center gap-3 flex-1 border-2 px-4 py-3.5 cursor-pointer transition-all"
-                    style={{
-                      borderColor: urgency === o.id ? '#1a7a68' : '#e5e7eb',
-                      backgroundColor: urgency === o.id ? 'rgba(26,122,104,0.04)' : 'white',
-                    }}
-                  >
-                    <input
-                      type="radio"
-                      name="urgency"
-                      value={o.id}
-                      checked={urgency === o.id}
-                      onChange={() => setUrgency(o.id)}
-                      className="accent-brand w-4 h-4 flex-shrink-0"
-                    />
-                    <div>
-                      <div className="text-sm font-bold"
-                        style={{ color: urgency === o.id ? '#1a7a68' : '#1f2937' }}>
-                        {o.label}
-                      </div>
-                      <div className="text-xs text-gray-400">{o.note}</div>
-                    </div>
-                  </label>
-                ))}
-              </div>
-
-              {/* Custom date */}
-              {urgency === 'custom' && (
-                <input
-                  type="date"
-                  id="deadline"
-                  name="deadline"
-                  min={today}
-                  className="border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700
-                             focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand mb-4"
-                  style={{ minWidth: '190px' }}
-                />
-              )}
-
-              {/* Debug */}
-              {status === 'loading' && debugMsg && (
-                <div className="mb-4 bg-blue-50 border border-blue-300 text-blue-700 px-4 py-2 text-sm">
-                  {debugMsg}
-                </div>
-              )}
-
-              {/* Error */}
-              {status === 'error' && (
-                <div className="mb-4 bg-red-50 border border-red-300 text-red-700 px-4 py-2 text-sm">
-                  {errorMsg}
-                </div>
-              )}
-
-              {/* Newsletter */}
-              <div className="mb-5 pt-4 border-t border-gray-100">
-                <label className="flex items-start gap-2.5 cursor-pointer group">
-                  <input
-                    type="checkbox"
-                    checked={newsletter}
-                    onChange={(e) => setNewsletter(e.target.checked)}
-                    className="w-3.5 h-3.5 accent-brand flex-shrink-0 mt-0.5"
-                  />
-                  <span className="text-xs text-gray-600 leading-relaxed">
-                    Chci dostávat e‑mailem tipy, slevy a nabídky.{' '}
-                    <span className="text-gray-400">
-                      Souhlas můžete kdykoliv odvolat.
-                    </span>
-                  </span>
+          {/* ── SEKCE 1: Kontaktní údaje ── */}
+          <div>
+            <SectionHeader num="1" title="Vaše kontaktní údaje" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+              <div>
+                <label htmlFor="name" className={labelCls}>
+                  Jméno <span className="text-brand">*</span>
                 </label>
+                <input type="text" id="name" name="name" required
+                  placeholder="Celé jméno" className={inputCls} />
               </div>
-
-              {/* Právní text */}
-              <p className="text-xs text-gray-400 leading-relaxed mb-4">
-                Odesláním formuláře berete na vědomí zpracování osobních údajů a potvrzujete
-                seznámení s{' '}
-                <a href="/ochrana-osobnich-udaju" className="underline hover:text-brand transition-colors" style={{ textDecorationColor: '#1a7a68' }}>
-                  ochranou osobních údajů
-                </a>{' '}
-                a{' '}
-                <a href="/obchodni-podminky" className="underline hover:text-brand transition-colors" style={{ textDecorationColor: '#1a7a68' }}>
-                  obchodními podmínkami
-                </a>
-                .
-              </p>
-
-              {/* Navy CTA bar */}
-              <div
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5"
-                style={{ backgroundColor: '#0d1f2d' }}
-              >
-                <div>
-                  <p className="text-white font-semibold text-base">
-                    Máte vše vyplněno? Odešlete poptávku.
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                    Odpovíme co nejdříve s cenovou nabídkou.
-                  </p>
-                </div>
-                <button
-                  type="submit"
-                  disabled={status === 'loading'}
-                  className="whitespace-nowrap px-8 py-3 font-bold text-sm text-white
-                             transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: '#1a7a68' }}
-                >
-                  {status === 'loading' ? 'Odesílám…' : 'Odeslat objednávku →'}
-                </button>
+              <div>
+                <label htmlFor="email" className={labelCls}>
+                  E&#x2011;mail <span className="text-brand">*</span>
+                </label>
+                <input type="email" id="email" name="email" required
+                  placeholder="e&#x2011;mailová adresa" className={inputCls} />
               </div>
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="phone" className={labelCls}>Telefon</label>
+                <input type="tel" id="phone" name="phone"
+                  placeholder="+420 xxx xxx xxx" className={inputCls} />
+              </div>
+              <div>
+                <label htmlFor="message" className={labelCls}>Zpráva</label>
+                <textarea id="message" name="message" rows={3}
+                  placeholder="Počet stran, škola, poznámky..."
+                  className={`${inputCls} resize-none`} />
+              </div>
+            </div>
+          </div>
 
-          </form>
+          {/* ── SEKCE 2: Soubory + Chci také ── */}
+          <div>
+            <SectionHeader num="2" title="Soubory a doplňkové služby" />
+
+            {/* File drop zone */}
+            <div
+              onDrop={onDrop}
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
+              onDragLeave={() => setIsDragging(false)}
+              onClick={() => fileInputRef.current?.click()}
+              className={`border-2 border-dashed px-4 py-6 text-center cursor-pointer transition-colors duration-200 mb-4 ${
+                isDragging
+                  ? 'border-brand bg-brand/5'
+                  : 'border-gray-300 hover:border-brand hover:bg-brand/5'
+              }`}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept={ACCEPTED_TYPES}
+                className="hidden"
+                onChange={(e: ChangeEvent<HTMLInputElement>) => addFiles(e.target.files)}
+              />
+              <p className="text-sm text-gray-500">
+                Přetáhněte soubory nebo{' '}
+                <span className="text-brand font-semibold">vyberte v počítači</span>
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                PDF, DOC, DOCX, RTF, ODT, TXT, XLS, XLSX, JPG, PNG, ZIP &ndash; max. {MAX_FILES} souborů, každý do 25 MB
+              </p>
+            </div>
+
+            {/* File list */}
+            {files.length > 0 && (
+              <ul className="mb-4 space-y-1">
+                {files.map((f, i) => (
+                  <li key={i} className="flex justify-between bg-gray-50 px-3 py-1.5 text-xs text-gray-600">
+                    <span className="truncate">{f.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(i)}
+                      className="ml-2 text-gray-400 hover:text-red-500 font-bold flex-shrink-0"
+                    >
+                      &times;
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {/* Chci také */}
+            <label className="block text-xs font-semibold text-gray-600 mb-2">Chci také</label>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-0">
+              {SERVICE_GROUPS.flat().map((service) => (
+                <label key={service} className="flex items-center gap-2 cursor-pointer py-1.5">
+                  <input type="checkbox" name="services" value={service}
+                    className="w-3.5 h-3.5 accent-brand flex-shrink-0" />
+                  <span className="text-xs text-gray-600">{service}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* ── SEKCE 3: Termín + odeslání ── */}
+          <div>
+            <SectionHeader num="3" title="Termín a odeslání" />
+
+            {/* Radio tiles */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+              {[
+                { id: 'expres' as const, label: 'Expres', note: 'do 24 hodin' },
+                { id: 'smart'  as const, label: 'Smart',  note: 'do 2 dnů'    },
+                { id: 'custom' as const, label: 'Vlastní datum', note: 'zvolím sám/a' },
+              ].map((o) => (
+                <label
+                  key={o.id}
+                  className="flex items-center gap-3 flex-1 border-2 px-4 py-3.5 cursor-pointer transition-all"
+                  style={{
+                    borderColor: urgency === o.id ? '#1a7a68' : '#e5e7eb',
+                    backgroundColor: urgency === o.id ? 'rgba(26,122,104,0.04)' : 'white',
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="urgency"
+                    value={o.id}
+                    checked={urgency === o.id}
+                    onChange={() => setUrgency(o.id)}
+                    className="accent-brand w-4 h-4 flex-shrink-0"
+                  />
+                  <div>
+                    <div className="text-sm font-bold"
+                      style={{ color: urgency === o.id ? '#1a7a68' : '#1f2937' }}>
+                      {o.label}
+                    </div>
+                    <div className="text-xs text-gray-400">{o.note}</div>
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            {/* Custom date */}
+            {urgency === 'custom' && (
+              <input
+                type="date"
+                id="deadline"
+                name="deadline"
+                min={today}
+                className="border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700
+                           focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand mb-4"
+                style={{ minWidth: '190px' }}
+              />
+            )}
+
+            {/* Debug */}
+            {status === 'loading' && debugMsg && (
+              <div className="mb-4 bg-blue-50 border border-blue-300 text-blue-700 px-4 py-2 text-sm">
+                {debugMsg}
+              </div>
+            )}
+
+            {/* Error */}
+            {status === 'error' && (
+              <div className="mb-4 bg-red-50 border border-red-300 text-red-700 px-4 py-2 text-sm">
+                {errorMsg}
+              </div>
+            )}
+
+            {/* Newsletter */}
+            <div className="mb-5 pt-4 border-t border-gray-100">
+              <label className="flex items-start gap-2.5 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={newsletter}
+                  onChange={(e) => setNewsletter(e.target.checked)}
+                  className="w-3.5 h-3.5 accent-brand flex-shrink-0 mt-0.5"
+                />
+                <span className="text-xs text-gray-600 leading-relaxed">
+                  Chci dostávat e&#x2011;mailem tipy, slevy a nabídky.{' '}
+                  <span className="text-gray-400">
+                    Souhlas můžete kdykoliv odvolat.
+                  </span>
+                </span>
+              </label>
+            </div>
+
+            {/* Právní text */}
+            <p className="text-xs text-gray-400 leading-relaxed mb-4">
+              Odesláním formuláře berete na vědomí zpracování osobních údajů a potvrzujete
+              seznámení s{' '}
+              <a href="/ochrana-osobnich-udaju" className="underline hover:text-brand transition-colors" style={{ textDecorationColor: '#1a7a68' }}>
+                ochranou osobních údajů
+              </a>{' '}
+              a{' '}
+              <a href="/obchodni-podminky" className="underline hover:text-brand transition-colors" style={{ textDecorationColor: '#1a7a68' }}>
+                obchodními podmínkami
+              </a>
+              .
+            </p>
+
+            {/* Navy CTA bar */}
+            <div
+              className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5"
+              style={{ backgroundColor: '#0d1f2d' }}
+            >
+              <div>
+                <p className="text-white font-semibold text-base">
+                  Máte vše vyplněno? Odešlete poptávku.
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                  Odpovíme co nejdříve s cenovou nabídkou.
+                </p>
+              </div>
+              <button
+                type="submit"
+                disabled={status === 'loading'}
+                className="whitespace-nowrap px-8 py-3 font-bold text-sm text-white
+                           transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{ backgroundColor: '#1a7a68' }}
+              >
+                {status === 'loading' ? 'Odesílám\u2026' : 'Odeslat objednávku \u2192'}
+              </button>
+            </div>
+          </div>
+
+        </form>
         )}
       </div>
     </section>
